@@ -702,6 +702,4 @@ module Isucondition
       end
     end
   end
-endinnodb_lock_wait_timeout = 1
-transaction_isolation = READ-COMMITTED
-innodb_autoinc_lock_mode = 2
+end
