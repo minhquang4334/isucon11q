@@ -603,9 +603,9 @@ module Isucondition
     get '/api/trend' do
       character_list = db.query('SELECT `character`, `id`, `jia_isu_uuid` FROM `isu`')
       isu_group_by_character = character_list.group_by { |c| c[:character] }
-      res = character_list.map do |character|
+      res = isu_group_by_character.map do |character, isu_list|
         # isu_list = db.xquery('SELECT * FROM `isu` WHERE `character` = ?', character.fetch(:character))
-        isu_list = isu_group_by_character.fetch(character.fetch(:character)) { nil }
+        # isu_list = isu
 
         character_info_isu_conditions = []
         character_warning_isu_conditions = []
