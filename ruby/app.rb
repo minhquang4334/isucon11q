@@ -176,6 +176,7 @@ module Isucondition
       halt_error 400, 'bad request body' unless jia_service_url
 
       system('../sql/init.sh', out: :err, exception: true)
+      # TODO: On Memory isu_association_config by Redis
       db.xquery(
         'INSERT INTO `isu_association_config` (`name`, `url`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `url` = VALUES(`url`)',
         'jia_service_url',
@@ -224,14 +225,21 @@ module Isucondition
     end
 
     # ISUの一覧を取得
+    # TODO: N+1 を解消
     get '/api/isu' do
       jia_user_id = user_id_from_session
       halt_error 401, 'you are not signed in' unless jia_user_id
 
       response_list = db_transaction do
-        isu_list = db.xquery('SELECT * FROM `isu` WHERE `jia_user_id` = ? ORDER BY `id` DESC', jia_user_id)
-        isu_list.map do |isu|
-          last_condition = db.xquery('SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1', isu.fetch(:jia_isu_uuid)).first
+        isu_list = db.xquery('SELECT jia_isu_uuid FROM `isu` WHERE `jia_user_id` = ? ORDER BY `id` DESC', jia_user_id)
+        jia_isu_uuids = isu_list.map { |isu| isu['jia_isu_uuid'] }
+        isu_conditions = db.xquery("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{jia_isu_uuids.join(',')}) ORDER BY `timestamp` DESC").map do |row|
+          [row['jia_isu_uuid'], row]
+        end.to_h
+
+        isu_list.map do |jia_isu_uuid|
+          last_condition = isu_conditions['jia_isu_uuid']
+          #last_condition = db.xquery('SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1', isu.fetch(:jia_isu_uuid)).first
 
           formatted_condition = last_condition ? {
             jia_isu_uuid: last_condition.fetch(:jia_isu_uuid),
@@ -581,6 +589,7 @@ module Isucondition
     end
 
     # ISUの性格毎の最新のコンディション情報
+    # TODO: N+1
     get '/api/trend' do
       character_list = db.query('SELECT `character` FROM `isu` GROUP BY `character`')
 
