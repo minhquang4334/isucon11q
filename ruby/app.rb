@@ -12,19 +12,10 @@ require 'redis'
 
 module Isucondition
   class App < Sinatra::Base
-    helpers Sinatra::CustomLogger
     configure :development do
       require 'sinatra/reloader'
       register Sinatra::Reloader
     end
-    configure :development, :production do
-      logger = Logger.new(File.open("ruby.log", 'a+'))
-      logger.level = Logger::DEBUG
-      set :logger, logger
-
-      logger.info('INIT')
-    end
-
     set :redis, Redis.new(:host => '192.168.0.11', :port => ENV.fetch('REDIS_PORT', 6379))
 
     ISU_COLLUMN = "`id`, `jia_isu_uuid`, `name`, `character`, `jia_user_id`"
@@ -109,7 +100,6 @@ module Isucondition
         return nil if !jia_user_id || jia_user_id.empty?
         # count = db.xquery('SELECT COUNT(*) AS `cnt` FROM `user` WHERE `jia_user_id` = ?', jia_user_id).first
         is_member = settings.redis.sismember("jia_user_ids", jia_user_id)
-        warn is_member
         return nil unless is_member
 
         jia_user_id
@@ -181,7 +171,6 @@ module Isucondition
       system('../sql/init.sh', out: :err, exception: true)
       settings.redis.flushall
       jia_user_ids = db.xquery('SELECT jia_user_id FROM user').map { |r| r[:jia_user_id] }
-      warn jia_user_ids
       settings.redis.sadd("jia_user_ids", jia_user_ids)
       isu_list = db.xquery('SELECT jia_isu_uuid FROM isu').map { |r| r[:jia_isu_uuid] }
       settings.redis.sadd("jia_isu_uuids", isu_list)
@@ -246,7 +235,6 @@ module Isucondition
           jia_isu_uuids = isu_list.map { |isu| "#{isu.fetch(:jia_isu_uuid)}" }
           join_conditions = jia_isu_uuids.map { |r| "'#{r}'" }.join(',')
           unless jia_isu_uuids.empty?
-            warn join_conditions          
             # isu_conditions = db.xquery("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) ORDER BY `timestamp` DESC").map do |row|
             isu_conditions = db.xquery("SELECT * FROM `isu_condition` INNER JOIN (SELECT `jia_isu_uuid`,  MAX(`timestamp`) as timestamp FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) GROUP BY `jia_isu_uuid`) AS max using (`jia_isu_uuid`, `timestamp`)").map do |row|
               [row.fetch(:jia_isu_uuid), row]
@@ -279,9 +267,6 @@ module Isucondition
           end
         end
       rescue => e
-        warn e
-        warn jia_user_id
-        warn isu_conditions
         raise e
       end
 
@@ -696,21 +681,7 @@ module Isucondition
           timestamp = Time.at(cond.fetch(:timestamp)).strftime("%Y-%m-%d %H:%M:%S")
           rows << "('%s', '%s', %s, '%s', '%s')"  % [ jia_isu_uuid, timestamp, cond.fetch(:is_sitting), cond.fetch(:condition), cond.fetch(:message)]
         end
-        # json_params.each do |cond|
-        #   timestamp = Time.at(cond.fetch(:timestamp))
-        #   halt_error 400, 'bad request body' unless valid_condition_format?(cond.fetch(:condition))
-
-        #   # db.xquery(
-        #   #   'INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES (?, ?, ?, ?, ?)',
-        #   #   jia_isu_uuid,
-        #   #   timestamp,
-        #   #   cond.fetch(:is_sitting),
-        #   #   cond.fetch(:condition),
-        #   #   cond.fetch(:message),
-        #   # )
-        #   db.xquery("INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES #{rows.join(',')}")
-        # end
-        warn "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES #{rows.join(',')}"
+        
         db.xquery("INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES #{rows.join(',')}")
       end
 
@@ -731,4 +702,6 @@ module Isucondition
       end
     end
   end
-end
+endinnodb_lock_wait_timeout = 1
+transaction_isolation = READ-COMMITTED
+innodb_autoinc_lock_mode = 2
