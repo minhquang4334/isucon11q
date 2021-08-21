@@ -232,9 +232,9 @@ module Isucondition
         jia_isu_uuids = isu_list.map { |isu| "#{isu.fetch(:jia_isu_uuid)}" }
         join_conditions = jia_isu_uuids.map { |r| "'#{r}'" }.join(',')
         unless jia_isu_uuids.empty?
-          warn join_conditions
-          warn "SELECT DISTINCT `jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message` FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) ORDER BY `timestamp` DESC"
-          isu_conditions = db.xquery("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) ORDER BY `timestamp` DESC").map do |row|
+          warn join_conditions          
+          # isu_conditions = db.xquery("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) ORDER BY `timestamp` DESC").map do |row|
+          isu_conditions = db.xquery("SELECT * FROM `isu_condition` INNER JOIN (SELECT `jia_isu_uuid`,  MAX(`timestamp`) as timestamp FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) GROUP BY `jia_isu_uuid`) AS max using (`jia_isu_uuid`, `timestamp`)").map do |row|
             [row.fetch(:jia_isu_uuid), row]
           end.to_h
         else
