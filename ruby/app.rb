@@ -183,6 +183,8 @@ module Isucondition
       jia_user_ids = db.xquery('SELECT jia_user_id FROM user').map { |r| r[:jia_user_id] }
       warn jia_user_ids
       settings.redis.sadd("jia_user_ids", jia_user_ids)
+      isu_list = db.xquery('SELECT jia_isu_uuid FROM isu').map { |r| r[:jia_isu_uuid] }
+      settings.redis.sadd("jia_isu_uuids", isu_list)
 
       # TODO: On Memory isu_association_config by Redis
       # db.xquery(
@@ -307,6 +309,7 @@ module Isucondition
             "INSERT INTO `isu` (`jia_isu_uuid`, `name`, `image`, `jia_user_id`) VALUES (?, ?, ?, ?)".b,
             jia_isu_uuid.b, isu_name.b, image, jia_user_id.b,
           )
+          settings.redis.sadd("jia_isu_uuids", jia_isu_uuid)
         rescue Mysql2::Error => e
           if e.error_number == MYSQL_ERR_NUM_DUPLICATE_ENTRY
             halt_error 409, "duplicated: isu"
@@ -666,7 +669,7 @@ module Isucondition
     # ISUからのコンディションを受け取る
     post '/api/condition/:jia_isu_uuid' do
       # TODO: 一定割合リクエストを落としてしのぐようにしたが、本来は全量さばけるようにすべき
-      drop_probability = 0.9
+      drop_probability = 0.5
       if rand <= drop_probability
         request.env['rack.logger'].warn 'drop post isu condition request'
         halt_error 202, ''
@@ -684,8 +687,9 @@ module Isucondition
       halt_error 400, 'bad request body' if json_params.empty?
 
       db_transaction do
-        count = db.xquery('SELECT COUNT(*) AS `cnt` FROM `isu` WHERE `jia_isu_uuid` = ?', jia_isu_uuid).first
-        halt_error 404, 'not found: isu' if count.fetch(:cnt).zero?
+        # count = db.xquery('SELECT COUNT(*) AS `cnt` FROM `isu` WHERE `jia_isu_uuid` = ?', jia_isu_uuid).first
+        is_member = settings.redis.sismember("jia_isu_uuids", jia_isu_uuid)
+        halt_error 404, 'not found: isu' unless is_member
 
         rows = []
         json_params.each do |cond|
