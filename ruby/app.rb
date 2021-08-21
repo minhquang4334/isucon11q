@@ -39,21 +39,13 @@ module Isucondition
     JIA_JWT_SIGNING_KEY = OpenSSL::PKey::EC.new(File.read(JIA_JWT_SIGNING_KEY_PATH), '')
 
     class MySQLConnectionEnv
-      def initialize
-        @host = get_env('MYSQL_HOST', '127.0.0.1')
-        @port = get_env('MYSQL_PORT', '3306')
-        @user = get_env('MYSQL_USER', 'isucon')
-        @db_name = get_env('MYSQL_DBNAME', 'isucondition')
-        @password = get_env('MYSQL_PASS', 'isucon')
-      end
-
       def connect_db
         Mysql2::Client.new(
-          host: @host,
-          port: @port,
-          username: @user,
-          database: @db_name,
-          password: @password,
+          host: '192.168.0.13',
+          port: 3306,
+          username: 'isucon',
+          database: 'isucondition',
+          password: 'isucon',
           charset: 'utf8mb4',
           database_timezone: :local,
           cast_booleans: true,
