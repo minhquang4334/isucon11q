@@ -174,10 +174,11 @@ module Isucondition
       settings.redis.sadd("jia_user_ids", jia_user_ids)
       isu_list = db.xquery('SELECT jia_isu_uuid FROM isu').map { |r| r[:jia_isu_uuid] }
       settings.redis.sadd("jia_isu_uuids", isu_list)
-      isu_conditions = db.xquery("SELECT * FROM `isu_condition` INNER JOIN (SELECT `jia_isu_uuid`,  MAX(`timestamp`) as timestamp FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) GROUP BY `jia_isu_uuid`) AS max using (`jia_isu_uuid`, `timestamp`)").to_a
+      isu_conditions = db.xquery("SELECT * FROM `isu_condition` INNER JOIN (SELECT `jia_isu_uuid`,  MAX(`timestamp`) as timestamp FROM `isu_condition` GROUP BY `jia_isu_uuid`) AS max using (`jia_isu_uuid`, `timestamp`)").to_a
       settings.redis.pipelined do
         isu_conditions.each do |isu|
           settings.redis.set("isu_conditions:#{isu[:jia_isu_uuid]}", isu[:condition])
+          settings.redis.set("timestamp_conditions:#{isu[:jia_isu_uuid]}", isu[:timestamp])
         end
       end
 
@@ -628,11 +629,12 @@ module Isucondition
           
           # isu_last_condition = isu_conditions.fetch(isu[:jia_isu_uuid]) { nil }
           isu_last_condition = settings.redis.get("isu_conditions:#{isu[:jia_isu_uuid]}")
+          timestamp  = settings.redis.get("timestamp_conditions:#{isu[:jia_isu_uuid]}")
           unless isu_last_condition.nil?
             # isu_last_condition = conditions.first
             # condition_level = calculate_condition_level(isu_last_condition.fetch(:condition))
             condition_level = calculate_condition_level(isu_last_condition)
-            trend_condition = { isu_id: isu.fetch(:id), timestamp: isu_last_condition.fetch(:timestamp).to_i }
+            trend_condition = { isu_id: isu.fetch(:id), timestamp: timestamp.to_i }
             case condition_level
             when 'info'
               character_info_isu_conditions.push(trend_condition)
@@ -695,6 +697,7 @@ module Isucondition
         settings.redis.pipelined do
           json_params.each do |cond|
             settings.redis.set("isu_conditions:#{cond[:jia_isu_uuid]}", cond.fetch(:condition))
+            settings.redis.set("timestamp_conditions:#{cond[:jia_isu_uuid]}", cond.fetch(:timestamp))
           end
         end
       end
