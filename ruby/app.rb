@@ -605,7 +605,7 @@ module Isucondition
       isu_group_by_character = character_list.group_by { |c| c[:character] }
       isu_conditions = db.xquery("SELECT * FROM `isu_condition` INNER JOIN (SELECT `jia_isu_uuid`,  MAX(`timestamp`) as timestamp FROM `isu_condition` GROUP BY `jia_isu_uuid`) AS max using (`jia_isu_uuid`, `timestamp`)").map do |row|
         [row.fetch(:jia_isu_uuid), row]
-      end
+      end.to_h
       res = isu_group_by_character.map do |character, isu_list|
         # isu_list = db.xquery('SELECT * FROM `isu` WHERE `character` = ?', character.fetch(:character))
         # isu_list = isu
