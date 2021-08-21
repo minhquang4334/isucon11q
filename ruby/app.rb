@@ -24,6 +24,7 @@ module Isucondition
       logger.info('INIT')
     end
 
+    ISU_COLLUMN = "`id`, `jia_isu_uuid`, `name`, `character`, `jia_user_id`"
     SESSION_NAME = 'isucondition_ruby'
     CONDITION_LIMIT = 20
     FRONTEND_CONTENTS_PATH = '../public'
@@ -319,7 +320,7 @@ module Isucondition
         isu_from_jia = JSON.parse(res.body, symbolize_names: true)
 
         db.xquery('UPDATE `isu` SET `character` = ? WHERE  `jia_isu_uuid` = ?', isu_from_jia.fetch(:character), jia_isu_uuid)
-        db.xquery('SELECT * FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?', jia_user_id, jia_isu_uuid).first
+        db.xquery("SELECT #{ISU_COLLUMN}  FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?", jia_user_id, jia_isu_uuid).first
       end
 
       status 201
@@ -339,7 +340,7 @@ module Isucondition
       halt_error 401, 'you are not signed in' unless jia_user_id
 
       jia_isu_uuid = params[:jia_isu_uuid]
-      isu = db.xquery('SELECT * FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?', jia_user_id, jia_isu_uuid).first
+      isu = db.xquery("SELECT #{ISU_COLLUMN} FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?", jia_user_id, jia_isu_uuid).first
       halt_error 404, 'not found: isu' unless isu
 
       content_type :json
