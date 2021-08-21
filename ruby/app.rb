@@ -8,6 +8,7 @@ require 'mysql2-cs-bind'
 require 'logger'
 require 'sinatra/custom_logger'
 require 'sinatra'
+require 'redis'
 
 module Isucondition
   class App < Sinatra::Base
@@ -23,6 +24,8 @@ module Isucondition
 
       logger.info('INIT')
     end
+
+    set :redis, Redis.new(:host => '192.168.0.11', :port => ENV.fetch('REDIS_PORT', 6379))
 
     ISU_COLLUMN = "`id`, `jia_isu_uuid`, `name`, `character`, `jia_user_id`"
     SESSION_NAME = 'isucondition_ruby'
@@ -104,8 +107,10 @@ module Isucondition
       def user_id_from_session
         jia_user_id = session[:jia_user_id]
         return nil if !jia_user_id || jia_user_id.empty?
-        count = db.xquery('SELECT COUNT(*) AS `cnt` FROM `user` WHERE `jia_user_id` = ?', jia_user_id).first
-        return nil if count.fetch(:cnt).to_i.zero?
+        # count = db.xquery('SELECT COUNT(*) AS `cnt` FROM `user` WHERE `jia_user_id` = ?', jia_user_id).first
+        is_member = settings.redis.sismember("jia_user_ids", jia_user_id)
+        warn is_member
+        return nil unless is_member
 
         jia_user_id
       end
@@ -174,12 +179,17 @@ module Isucondition
       halt_error 400, 'bad request body' unless jia_service_url
 
       system('../sql/init.sh', out: :err, exception: true)
+      settings.redis.flushall
+      jia_user_ids = db.xquery('SELECT jia_user_id FROM user').map { |r| r[:jia_user_id] }
+      warn jia_user_ids
+      settings.redis.sadd("jia_user_ids", jia_user_ids)
+
       # TODO: On Memory isu_association_config by Redis
-      db.xquery(
-        'INSERT INTO `isu_association_config` (`name`, `url`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `url` = VALUES(`url`)',
-        'jia_service_url',
-        jia_service_url,
-      )
+      # db.xquery(
+      #   'INSERT INTO `isu_association_config` (`name`, `url`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `url` = VALUES(`url`)',
+      #   'jia_service_url',
+      #   jia_service_url,
+      # )
 
       content_type :json
       { language: 'ruby' }.to_json
@@ -198,6 +208,7 @@ module Isucondition
       halt_error 400, 'invalid JWT payload' if !jia_user_id || !jia_user_id.is_a?(String)
 
       db.xquery('INSERT IGNORE INTO user (`jia_user_id`) VALUES (?)', jia_user_id)
+      settings.redis.sadd("jia_user_ids", jia_user_id)
 
       session[:jia_user_id] = jia_user_id
 
