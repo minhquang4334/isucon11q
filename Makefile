@@ -32,7 +32,7 @@ enable-ruby: ## disable go and enable ruby
 
 restart: ## restart all service
 	@make -s nginx-restart
-	@make -s db-restart
+#	@make -s db-restart
 	@make -s ruby-restart
 
 ruby-log: ## Ruby server's log
