@@ -678,7 +678,7 @@ module Isucondition
 
         rows = []
         json_params.each do |cond|
-          timestamp = cond.fetch(:timestamp)
+          timestamp = Time.at(cond.fetch(:timestamp)).strftime("%Y-%M-%d %H:%M:%S")
           rows << "('%s', '%s', %s, '%s', '%s')"  % [ jia_isu_uuid, timestamp, cond.fetch(:is_sitting), cond.fetch(:condition), cond.fetch(:message)]
         end
         # json_params.each do |cond|
