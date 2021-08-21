@@ -5,12 +5,24 @@ require 'sinatra/base'
 require 'uri'
 require 'mysql2'
 require 'mysql2-cs-bind'
+require 'logger'
+require 'sinatra/custom_logger'
+require 'sinatra'
 
 module Isucondition
+  helpers Sinatra::CustomLogger
   class App < Sinatra::Base
     configure :development do
       require 'sinatra/reloader'
       register Sinatra::Reloader
+    end
+
+    configure :development, :production do
+      logger = Logger.new(File.open("ruby.log", 'a+'))
+      logger.level = Logger::DEBUG
+      set :logger, logger
+
+      logger.info('INIT')
     end
 
     SESSION_NAME = 'isucondition_ruby'
