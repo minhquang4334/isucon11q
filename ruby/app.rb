@@ -242,7 +242,7 @@ module Isucondition
         end
 
         isu_list.map do |isu|
-          last_condition = isu_conditions.fetch(isu.fetch(:jia_isu_uuid))
+          last_condition = isu_conditions.fetch(isu.fetch(:jia_isu_uuid)) { nil }
           #last_condition = db.xquery('SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1', isu.fetch(:jia_isu_uuid)).first
 
           formatted_condition = last_condition ? {
