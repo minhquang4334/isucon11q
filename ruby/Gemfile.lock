@@ -14,6 +14,7 @@ GEM
     rack (2.2.3)
     rack-protection (2.1.0)
       rack
+    redis (4.4.0)
     ruby2_keywords (0.0.5)
     sinatra (2.1.0)
       mustermann (~> 1.0)
@@ -36,8 +37,9 @@ DEPENDENCIES
   mysql2
   mysql2-cs-bind
   puma
+  redis
   sinatra
   sinatra-contrib
 
 BUNDLED WITH
-   2.1.4
+   2.2.22

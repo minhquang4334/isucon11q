@@ -8,21 +8,15 @@ require 'mysql2-cs-bind'
 require 'logger'
 require 'sinatra/custom_logger'
 require 'sinatra'
+require 'redis'
 
 module Isucondition
   class App < Sinatra::Base
-    helpers Sinatra::CustomLogger
     configure :development do
       require 'sinatra/reloader'
       register Sinatra::Reloader
     end
-    configure :development, :production do
-      logger = Logger.new(File.open("ruby.log", 'a+'))
-      logger.level = Logger::DEBUG
-      set :logger, logger
-
-      logger.info('INIT')
-    end
+    set :redis, Redis.new(:host => '192.168.0.11', :port => ENV.fetch('REDIS_PORT', 6379))
 
     ISU_COLLUMN = "`id`, `jia_isu_uuid`, `name`, `character`, `jia_user_id`"
     SESSION_NAME = 'isucondition_ruby'
@@ -104,8 +98,9 @@ module Isucondition
       def user_id_from_session
         jia_user_id = session[:jia_user_id]
         return nil if !jia_user_id || jia_user_id.empty?
-        count = db.xquery('SELECT COUNT(*) AS `cnt` FROM `user` WHERE `jia_user_id` = ?', jia_user_id).first
-        return nil if count.fetch(:cnt).to_i.zero?
+        # count = db.xquery('SELECT COUNT(*) AS `cnt` FROM `user` WHERE `jia_user_id` = ?', jia_user_id).first
+        is_member = settings.redis.sismember("jia_user_ids", jia_user_id)
+        return nil unless is_member
 
         jia_user_id
       end
@@ -174,12 +169,18 @@ module Isucondition
       halt_error 400, 'bad request body' unless jia_service_url
 
       system('../sql/init.sh', out: :err, exception: true)
+      settings.redis.flushall
+      jia_user_ids = db.xquery('SELECT jia_user_id FROM user').map { |r| r[:jia_user_id] }
+      settings.redis.sadd("jia_user_ids", jia_user_ids)
+      isu_list = db.xquery('SELECT jia_isu_uuid FROM isu').map { |r| r[:jia_isu_uuid] }
+      settings.redis.sadd("jia_isu_uuids", isu_list)
+
       # TODO: On Memory isu_association_config by Redis
-      db.xquery(
-        'INSERT INTO `isu_association_config` (`name`, `url`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `url` = VALUES(`url`)',
-        'jia_service_url',
-        jia_service_url,
-      )
+      # db.xquery(
+      #   'INSERT INTO `isu_association_config` (`name`, `url`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `url` = VALUES(`url`)',
+      #   'jia_service_url',
+      #   jia_service_url,
+      # )
 
       content_type :json
       { language: 'ruby' }.to_json
@@ -198,6 +199,7 @@ module Isucondition
       halt_error 400, 'invalid JWT payload' if !jia_user_id || !jia_user_id.is_a?(String)
 
       db.xquery('INSERT IGNORE INTO user (`jia_user_id`) VALUES (?)', jia_user_id)
+      settings.redis.sadd("jia_user_ids", jia_user_id)
 
       session[:jia_user_id] = jia_user_id
 
@@ -233,7 +235,6 @@ module Isucondition
           jia_isu_uuids = isu_list.map { |isu| "#{isu.fetch(:jia_isu_uuid)}" }
           join_conditions = jia_isu_uuids.map { |r| "'#{r}'" }.join(',')
           unless jia_isu_uuids.empty?
-            warn join_conditions          
             # isu_conditions = db.xquery("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) ORDER BY `timestamp` DESC").map do |row|
             isu_conditions = db.xquery("SELECT * FROM `isu_condition` INNER JOIN (SELECT `jia_isu_uuid`,  MAX(`timestamp`) as timestamp FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) GROUP BY `jia_isu_uuid`) AS max using (`jia_isu_uuid`, `timestamp`)").map do |row|
               [row.fetch(:jia_isu_uuid), row]
@@ -266,9 +267,6 @@ module Isucondition
           end
         end
       rescue => e
-        warn e
-        warn jia_user_id
-        warn isu_conditions
         raise e
       end
 
@@ -296,6 +294,7 @@ module Isucondition
             "INSERT INTO `isu` (`jia_isu_uuid`, `name`, `image`, `jia_user_id`) VALUES (?, ?, ?, ?)".b,
             jia_isu_uuid.b, isu_name.b, image, jia_user_id.b,
           )
+          settings.redis.sadd("jia_isu_uuids", jia_isu_uuid)
         rescue Mysql2::Error => e
           if e.error_number == MYSQL_ERR_NUM_DUPLICATE_ENTRY
             halt_error 409, "duplicated: isu"
@@ -655,7 +654,7 @@ module Isucondition
     # ISUからのコンディションを受け取る
     post '/api/condition/:jia_isu_uuid' do
       # TODO: 一定割合リクエストを落としてしのぐようにしたが、本来は全量さばけるようにすべき
-      drop_probability = 0.9
+      drop_probability = 0.5
       if rand <= drop_probability
         request.env['rack.logger'].warn 'drop post isu condition request'
         halt_error 202, ''
@@ -673,29 +672,16 @@ module Isucondition
       halt_error 400, 'bad request body' if json_params.empty?
 
       db_transaction do
-        count = db.xquery('SELECT COUNT(*) AS `cnt` FROM `isu` WHERE `jia_isu_uuid` = ?', jia_isu_uuid).first
-        halt_error 404, 'not found: isu' if count.fetch(:cnt).zero?
+        # count = db.xquery('SELECT COUNT(*) AS `cnt` FROM `isu` WHERE `jia_isu_uuid` = ?', jia_isu_uuid).first
+        is_member = settings.redis.sismember("jia_isu_uuids", jia_isu_uuid)
+        halt_error 404, 'not found: isu' unless is_member
 
         rows = []
         json_params.each do |cond|
           timestamp = Time.at(cond.fetch(:timestamp)).strftime("%Y-%m-%d %H:%M:%S")
           rows << "('%s', '%s', %s, '%s', '%s')"  % [ jia_isu_uuid, timestamp, cond.fetch(:is_sitting), cond.fetch(:condition), cond.fetch(:message)]
         end
-        # json_params.each do |cond|
-        #   timestamp = Time.at(cond.fetch(:timestamp))
-        #   halt_error 400, 'bad request body' unless valid_condition_format?(cond.fetch(:condition))
-
-        #   # db.xquery(
-        #   #   'INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES (?, ?, ?, ?, ?)',
-        #   #   jia_isu_uuid,
-        #   #   timestamp,
-        #   #   cond.fetch(:is_sitting),
-        #   #   cond.fetch(:condition),
-        #   #   cond.fetch(:message),
-        #   # )
-        #   db.xquery("INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES #{rows.join(',')}")
-        # end
-        warn "INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES #{rows.join(',')}"
+        
         db.xquery("INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES #{rows.join(',')}")
       end
 
