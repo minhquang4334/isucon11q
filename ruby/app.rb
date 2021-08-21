@@ -232,13 +232,17 @@ module Isucondition
 
       response_list = db_transaction do
         isu_list = db.xquery('SELECT jia_isu_uuid FROM `isu` WHERE `jia_user_id` = ? ORDER BY `id` DESC', jia_user_id)
-        jia_isu_uuids = isu_list.map { |isu| isu['jia_isu_uuid'] }
-        isu_conditions = db.xquery("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{jia_isu_uuids.join(',')}) ORDER BY `timestamp` DESC").map do |row|
-          [row['jia_isu_uuid'], row]
-        end.to_h
+        jia_isu_uuids = isu_list.map { |isu| isu.fetch(:jia_isu_uuid) }
+        unless jia_isu_uuids.empty?
+          isu_conditions = db.xquery("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{jia_isu_uuids.join(',')}) ORDER BY `timestamp` DESC").map do |row|
+            [row.fetch(:jia_isu_uuid), row]
+          end.to_h
+        else
+          isu_conditions = {}
+        end
 
         isu_list.map do |jia_isu_uuid|
-          last_condition = isu_conditions['jia_isu_uuid']
+          last_condition = isu_conditions.fetch(:jia_isu_uuid)
           #last_condition = db.xquery('SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1', isu.fetch(:jia_isu_uuid)).first
 
           formatted_condition = last_condition ? {
