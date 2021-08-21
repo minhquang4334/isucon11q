@@ -22,7 +22,8 @@ CREATE TABLE `isu` (
   `created_at` DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at` DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   PRIMARY KEY(`id`),
-  KEY key_jia_user_isu_id (jia_user_id, jia_isu_uuid)
+  KEY key_jia_user_isu_id (jia_user_id, jia_isu_uuid),
+  KEY key_character (`character`)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4;
 
 -- SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1
