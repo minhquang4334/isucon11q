@@ -31,6 +31,8 @@ enable-ruby: ## disable go and enable ruby
 	@export PATH=$HOME/local/ruby/bin:$HOME/ruby/bin:$PATH
 
 restart: ## restart all service
+	@sudo rm /var/log/nginx/access.log
+	@sudo rm /var/log/nginx/error.log
 	@make -s nginx-restart
 #	@make -s db-restart
 	@make -s ruby-restart
@@ -56,6 +58,9 @@ alp: ## Run alp
 	@alp -f /var/log/nginx/access.log  --sum  -r --aggregates '/channel/\d+, /history/\d+, /profile/\w+, /icons/\w+' --start-time-duration 5m
 
 db-restart: ## Restart mysql
+	@sudo rm /var/lib/mysql/slow-query.log
+	@sudo touch /var/lib/mysql/slow-query.log
+	@sudo chown mysql:mysql /var/lib/mysql/slow-query.log
 	@sudo systemctl restart mysql
 	@echo 'Restart mysql'
 
