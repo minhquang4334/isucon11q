@@ -110,9 +110,7 @@ module Isucondition
       end
 
       def jia_service_url
-        config = db.xquery('SELECT * FROM `isu_association_config` WHERE `name` = ?', 'jia_service_url').first
-        return DEFAULT_JIA_SERVICE_URL unless config
-        config[:url]
+        'http://54.199.58.1:5000'
       end
 
       # ISUのコンディションの文字列からコンディションレベルを計算
