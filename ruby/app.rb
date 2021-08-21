@@ -174,6 +174,12 @@ module Isucondition
       settings.redis.sadd("jia_user_ids", jia_user_ids)
       isu_list = db.xquery('SELECT jia_isu_uuid FROM isu').map { |r| r[:jia_isu_uuid] }
       settings.redis.sadd("jia_isu_uuids", isu_list)
+      isu_conditions = db.xquery("SELECT * FROM `isu_condition` INNER JOIN (SELECT `jia_isu_uuid`,  MAX(`timestamp`) as timestamp FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) GROUP BY `jia_isu_uuid`) AS max using (`jia_isu_uuid`, `timestamp`)").to_a
+      settings.redis.pipelined do
+        isu_conditions.each do |isu|
+          settings.redis.set("isu_conditions:#{isu[:jia_isu_uuid]}", isu[:condition])
+        end
+      end
 
       # TODO: On Memory isu_association_config by Redis
       # db.xquery(
@@ -603,9 +609,9 @@ module Isucondition
     get '/api/trend' do
       character_list = db.query('SELECT `character`, `id`, `jia_isu_uuid` FROM `isu`')
       isu_group_by_character = character_list.group_by { |c| c[:character] }
-      isu_conditions = db.xquery("SELECT * FROM `isu_condition` INNER JOIN (SELECT `jia_isu_uuid`,  MAX(`timestamp`) as timestamp FROM `isu_condition` GROUP BY `jia_isu_uuid`) AS max using (`jia_isu_uuid`, `timestamp`)").map do |row|
-        [row.fetch(:jia_isu_uuid), row]
-      end.to_h
+      # isu_conditions = db.xquery("SELECT * FROM `isu_condition` INNER JOIN (SELECT `jia_isu_uuid`,  MAX(`timestamp`) as timestamp FROM `isu_condition` GROUP BY `jia_isu_uuid`) AS max using (`jia_isu_uuid`, `timestamp`)").map do |row|
+      #   [row.fetch(:jia_isu_uuid), row]
+      # end.to_h
       res = isu_group_by_character.map do |character, isu_list|
         # isu_list = db.xquery('SELECT * FROM `isu` WHERE `character` = ?', character.fetch(:character))
         # isu_list = isu
@@ -619,10 +625,13 @@ module Isucondition
           # [row.fetch(:jia_isu_uuid), row]
           # end.to_h
           # conditions = db.xquery('SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC', isu.fetch(:jia_isu_uuid)).to_a
-          isu_last_condition = isu_conditions.fetch(isu[:jia_isu_uuid]) { nil }
+          
+          # isu_last_condition = isu_conditions.fetch(isu[:jia_isu_uuid]) { nil }
+          isu_last_condition = settings.redis.get("isu_conditions:#{isu[:jia_isu_uuid]}")
           unless isu_last_condition.nil?
             # isu_last_condition = conditions.first
-            condition_level = calculate_condition_level(isu_last_condition.fetch(:condition))
+            # condition_level = calculate_condition_level(isu_last_condition.fetch(:condition))
+            condition_level = calculate_condition_level(isu_last_condition)
             trend_condition = { isu_id: isu.fetch(:id), timestamp: isu_last_condition.fetch(:timestamp).to_i }
             case condition_level
             when 'info'
@@ -683,6 +692,11 @@ module Isucondition
         end
         
         db.xquery("INSERT INTO `isu_condition` (`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`) VALUES #{rows.join(',')}")
+        settings.redis.pipelined do
+          json_params.each do |cond|
+            settings.redis.set("isu_conditions:#{cond[:jia_isu_uuid]}", cond.fetch(:condition))
+          end
+        end
       end
 
       status 202
@@ -702,6 +716,4 @@ module Isucondition
       end
     end
   end
-endinnodb_lock_wait_timeout = 1
-transaction_isolation = READ-COMMITTED
-innodb_autoinc_lock_mode = 2
+end
