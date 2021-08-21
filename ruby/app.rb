@@ -601,8 +601,8 @@ module Isucondition
     # ISUの性格毎の最新のコンディション情報
     # TODO: N+1
     get '/api/trend' do
-      character_list = db.query('SELECT `character`, `id`, `jia_isu_uuid` FROM `isu` GROUP BY `character`')
-      isu_group_by_character = character_list.group_by { |c| c.[:character] }
+      character_list = db.query('SELECT `character`, `id`, `jia_isu_uuid` FROM `isu`')
+      isu_group_by_character = character_list.group_by { |c| c[:character] }
       res = character_list.map do |character|
         # isu_list = db.xquery('SELECT * FROM `isu` WHERE `character` = ?', character.fetch(:character))
         isu_list = isu_group_by_character.fetch(character.fetch(:character)) { nil }
