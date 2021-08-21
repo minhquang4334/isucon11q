@@ -633,7 +633,7 @@ module Isucondition
         character_critical_isu_conditions.sort! { |a,b| b.fetch(:timestamp) <=> a.fetch(:timestamp) }
 
         {
-          character: character.fetch(:character),
+          character: character,
           info: character_info_isu_conditions,
           warning: character_warning_isu_conditions,
           critical: character_critical_isu_conditions,
