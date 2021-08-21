@@ -630,11 +630,12 @@ module Isucondition
           # isu_last_condition = isu_conditions.fetch(isu[:jia_isu_uuid]) { nil }
           isu_last_condition = settings.redis.get("isu_conditions:#{isu[:jia_isu_uuid]}")
           timestamp  = settings.redis.get("timestamp_conditions:#{isu[:jia_isu_uuid]}")
+          timestamp = Time.new(timestamp).to_i
           unless isu_last_condition.nil?
             # isu_last_condition = conditions.first
             # condition_level = calculate_condition_level(isu_last_condition.fetch(:condition))
             condition_level = calculate_condition_level(isu_last_condition)
-            trend_condition = { isu_id: isu.fetch(:id), timestamp: timestamp.to_i }
+            trend_condition = { isu_id: isu.fetch(:id), timestamp: timestamp }
             case condition_level
             when 'info'
               character_info_isu_conditions.push(trend_condition)
