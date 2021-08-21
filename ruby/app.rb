@@ -10,13 +10,12 @@ require 'sinatra/custom_logger'
 require 'sinatra'
 
 module Isucondition
-  helpers Sinatra::CustomLogger
   class App < Sinatra::Base
+    helpers Sinatra::CustomLogger
     configure :development do
       require 'sinatra/reloader'
       register Sinatra::Reloader
     end
-
     configure :development, :production do
       logger = Logger.new(File.open("ruby.log", 'a+'))
       logger.level = Logger::DEBUG
