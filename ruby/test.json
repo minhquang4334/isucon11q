@@ -28,22 +28,48 @@
     "info": [],
     "warning": [
       {
+        "isu_id": 66,
+        "timestamp": 1629462254
+      },
+      {
         "isu_id": 2,
         "timestamp": 1622959149
       }
     ],
-    "critical": []
+    "critical": [
+      {
+        "isu_id": 82,
+        "timestamp": 1630191446
+      }
+    ]
   },
   {
     "character": "おくびょう",
     "info": [],
     "warning": [
       {
+        "isu_id": 59,
+        "timestamp": 1630255116
+      },
+      {
         "isu_id": 3,
         "timestamp": 1622959149
       }
     ],
-    "critical": []
+    "critical": [
+      {
+        "isu_id": 70,
+        "timestamp": 1630224546
+      },
+      {
+        "isu_id": 37,
+        "timestamp": 1629984814
+      },
+      {
+        "isu_id": 57,
+        "timestamp": 1629902383
+      }
+    ]
   },
   {
     "character": "おだやか",
@@ -54,7 +80,24 @@
         "timestamp": 1622959149
       }
     ],
-    "critical": []
+    "critical": [
+      {
+        "isu_id": 38,
+        "timestamp": 1630293735
+      },
+      {
+        "isu_id": 50,
+        "timestamp": 1630257713
+      },
+      {
+        "isu_id": 65,
+        "timestamp": 1630193402
+      },
+      {
+        "isu_id": 60,
+        "timestamp": 1629793953
+      }
+    ]
   },
   {
     "character": "おっとり",
@@ -65,7 +108,12 @@
       }
     ],
     "warning": [],
-    "critical": []
+    "critical": [
+      {
+        "isu_id": 67,
+        "timestamp": 1630257167
+      }
+    ]
   },
   {
     "character": "おとなしい",
@@ -76,23 +124,57 @@
         "timestamp": 1625683480
       }
     ],
-    "critical": []
+    "critical": [
+      {
+        "isu_id": 79,
+        "timestamp": 1630293686
+      },
+      {
+        "isu_id": 72,
+        "timestamp": 1630254297
+      },
+      {
+        "isu_id": 62,
+        "timestamp": 1629945792
+      }
+    ]
   },
   {
     "character": "がんばりや",
     "info": [
+      {
+        "isu_id": 48,
+        "timestamp": 1628591507
+      },
       {
         "isu_id": 7,
         "timestamp": 1625683480
       }
     ],
     "warning": [],
-    "critical": []
+    "critical": [
+      {
+        "isu_id": 63,
+        "timestamp": 1630225407
+      },
+      {
+        "isu_id": 56,
+        "timestamp": 1630193751
+      },
+      {
+        "isu_id": 49,
+        "timestamp": 1629985512
+      }
+    ]
   },
   {
     "character": "きまぐれ",
     "info": [],
     "warning": [
+      {
+        "isu_id": 46,
+        "timestamp": 1630294805
+      },
       {
         "isu_id": 8,
         "timestamp": 1625683480
@@ -105,27 +187,57 @@
     "info": [],
     "warning": [
       {
+        "isu_id": 41,
+        "timestamp": 1630295050
+      },
+      {
+        "isu_id": 34,
+        "timestamp": 1628637149
+      },
+      {
         "isu_id": 9,
         "timestamp": 1625683480
       }
     ],
-    "critical": []
+    "critical": [
+      {
+        "isu_id": 43,
+        "timestamp": 1630258919
+      },
+      {
+        "isu_id": 42,
+        "timestamp": 1630258296
+      }
+    ]
   },
   {
     "character": "しんちょう",
     "info": [],
     "warning": [
       {
+        "isu_id": 78,
+        "timestamp": 1630257732
+      },
+      {
         "isu_id": 10,
         "timestamp": 1625683480
       }
     ],
-    "critical": []
+    "critical": [
+      {
+        "isu_id": 47,
+        "timestamp": 1630221689
+      }
+    ]
   },
   {
     "character": "すなお",
     "info": [],
     "warning": [
+      {
+        "isu_id": 52,
+        "timestamp": 1630148555
+      },
       {
         "isu_id": 11,
         "timestamp": 1625683480
@@ -141,19 +253,47 @@
         "timestamp": 1625683480
       }
     ],
-    "warning": [],
-    "critical": []
+    "warning": [
+      {
+        "isu_id": 55,
+        "timestamp": 1630256733
+      },
+      {
+        "isu_id": 30,
+        "timestamp": 1628604295
+      }
+    ],
+    "critical": [
+      {
+        "isu_id": 68,
+        "timestamp": 1630191111
+      },
+      {
+        "isu_id": 76,
+        "timestamp": 1630063887
+      }
+    ]
   },
   {
     "character": "せっかち",
-    "info": [],
+    "info": [
+      {
+        "isu_id": 39,
+        "timestamp": 1628581055
+      }
+    ],
     "warning": [
       {
         "isu_id": 13,
         "timestamp": 1625683480
       }
     ],
-    "critical": []
+    "critical": [
+      {
+        "isu_id": 71,
+        "timestamp": 1630220159
+      }
+    ]
   },
   {
     "character": "てれや",
@@ -164,7 +304,12 @@
         "timestamp": 1625683480
       }
     ],
-    "critical": []
+    "critical": [
+      {
+        "isu_id": 75,
+        "timestamp": 1629984695
+      }
+    ]
   },
   {
     "character": "なまいき",
@@ -175,7 +320,12 @@
         "timestamp": 1625683480
       }
     ],
-    "critical": []
+    "critical": [
+      {
+        "isu_id": 45,
+        "timestamp": 1630257865
+      }
+    ]
   },
   {
     "character": "のうてんき",
@@ -186,29 +336,56 @@
         "timestamp": 1625683480
       }
     ],
-    "critical": []
+    "critical": [
+      {
+        "isu_id": 58,
+        "timestamp": 1630292303
+      }
+    ]
   },
   {
     "character": "のんき",
     "info": [],
     "warning": [
       {
+        "isu_id": 73,
+        "timestamp": 1630191969
+      },
+      {
         "isu_id": 17,
         "timestamp": 1625683480
       }
     ],
-    "critical": []
+    "critical": [
+      {
+        "isu_id": 69,
+        "timestamp": 1630193812
+      },
+      {
+        "isu_id": 44,
+        "timestamp": 1630145959
+      }
+    ]
   },
   {
     "character": "ひかえめ",
     "info": [],
     "warning": [
       {
+        "isu_id": 40,
+        "timestamp": 1629904709
+      },
+      {
         "isu_id": 18,
         "timestamp": 1625683480
       }
     ],
-    "critical": []
+    "critical": [
+      {
+        "isu_id": 51,
+        "timestamp": 1629097512
+      }
+    ]
   },
   {
     "character": "まじめ",
@@ -218,19 +395,50 @@
         "timestamp": 1625683480
       }
     ],
-    "warning": [],
-    "critical": []
+    "warning": [
+      {
+        "isu_id": 77,
+        "timestamp": 1630260138
+      }
+    ],
+    "critical": [
+      {
+        "isu_id": 64,
+        "timestamp": 1630256473
+      },
+      {
+        "isu_id": 53,
+        "timestamp": 1630146343
+      },
+      {
+        "isu_id": 80,
+        "timestamp": 1629904932
+      }
+    ]
   },
   {
     "character": "むじゃき",
     "info": [],
     "warning": [
       {
+        "isu_id": 35,
+        "timestamp": 1628776505
+      },
+      {
         "isu_id": 20,
         "timestamp": 1625683480
       }
     ],
-    "critical": []
+    "critical": [
+      {
+        "isu_id": 36,
+        "timestamp": 1630146411
+      },
+      {
+        "isu_id": 54,
+        "timestamp": 1630101286
+      }
+    ]
   },
   {
     "character": "やんちゃ",
@@ -252,7 +460,12 @@
       }
     ],
     "warning": [],
-    "critical": []
+    "critical": [
+      {
+        "isu_id": 81,
+        "timestamp": 1630222147
+      }
+    ]
   },
   {
     "character": "ようき",
@@ -263,7 +476,16 @@
       }
     ],
     "warning": [],
-    "critical": []
+    "critical": [
+      {
+        "isu_id": 74,
+        "timestamp": 1630294530
+      },
+      {
+        "isu_id": 29,
+        "timestamp": 1630257657
+      }
+    ]
   },
   {
     "character": "れいせい",
@@ -285,6 +507,11 @@
         "timestamp": 1625683480
       }
     ],
-    "critical": []
+    "critical": [
+      {
+        "isu_id": 61,
+        "timestamp": 1630105703
+      }
+    ]
   }
 ]
