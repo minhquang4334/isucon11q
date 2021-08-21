@@ -619,8 +619,8 @@ module Isucondition
           # [row.fetch(:jia_isu_uuid), row]
           # end.to_h
           # conditions = db.xquery('SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC', isu.fetch(:jia_isu_uuid)).to_a
-          conditions = isu_conditions.fetch(isu[:jia_isu_uuid]) { nil }
-          unless conditions.nil?
+          isu_last_condition = isu_conditions.fetch(isu[:jia_isu_uuid]) { nil }
+          unless isu_last_condition.nil?
             # isu_last_condition = conditions.first
             condition_level = calculate_condition_level(isu_last_condition.fetch(:condition))
             trend_condition = { isu_id: isu.fetch(:id), timestamp: isu_last_condition.fetch(:timestamp).to_i }
