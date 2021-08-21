@@ -233,7 +233,7 @@ module Isucondition
         join_conditions = jia_isu_uuids.map { |r| "'#{r}'" }.join(',')
         unless jia_isu_uuids.empty?
           warn join_conditions
-          warn "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) ORDER BY `timestamp` DESC"
+          warn "SELECT DISTINCT `jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message` FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) ORDER BY `timestamp` DESC"
           isu_conditions = db.xquery("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) ORDER BY `timestamp` DESC").map do |row|
             [row.fetch(:jia_isu_uuid), row]
           end.to_h
