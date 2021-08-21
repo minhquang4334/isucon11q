@@ -25,7 +25,7 @@ module Isucondition
       logger.info('INIT')
     end
 
-    set :redis, Redis.new(:host => ENV.fetch('REDIS_HOST', '127.0.0.1'), :port => ENV.fetch('REDIS_PORT', 6379))
+    set :redis, Redis.new(:host => '192.168.0.11', :port => ENV.fetch('REDIS_PORT', 6379))
 
     ISU_COLLUMN = "`id`, `jia_isu_uuid`, `name`, `character`, `jia_user_id`"
     SESSION_NAME = 'isucondition_ruby'
