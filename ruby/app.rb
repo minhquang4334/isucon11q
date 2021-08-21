@@ -226,43 +226,49 @@ module Isucondition
     get '/api/isu' do
       jia_user_id = user_id_from_session
       halt_error 401, 'you are not signed in' unless jia_user_id
+      begin
+        response_list = db_transaction do
+          isu_list = db.xquery('SELECT `jia_isu_uuid`, `name`, `id`, `character` FROM `isu` WHERE `jia_user_id` = ? ORDER BY `id` DESC', jia_user_id)
+          jia_isu_uuids = isu_list.map { |isu| "#{isu.fetch(:jia_isu_uuid)}" }
+          join_conditions = jia_isu_uuids.map { |r| "'#{r}'" }.join(',')
+          unless jia_isu_uuids.empty?
+            warn join_conditions          
+            # isu_conditions = db.xquery("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) ORDER BY `timestamp` DESC").map do |row|
+            isu_conditions = db.xquery("SELECT * FROM `isu_condition` INNER JOIN (SELECT `jia_isu_uuid`,  MAX(`timestamp`) as timestamp FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) GROUP BY `jia_isu_uuid`) AS max using (`jia_isu_uuid`, `timestamp`)").map do |row|
+              [row.fetch(:jia_isu_uuid), row]
+            end.to_h
+          else
+            isu_conditions = {}
+          end
 
-      response_list = db_transaction do
-        isu_list = db.xquery('SELECT `jia_isu_uuid`, `name`, `id`, `character` FROM `isu` WHERE `jia_user_id` = ? ORDER BY `id` DESC', jia_user_id)
-        jia_isu_uuids = isu_list.map { |isu| "#{isu.fetch(:jia_isu_uuid)}" }
-        join_conditions = jia_isu_uuids.map { |r| "'#{r}'" }.join(',')
-        unless jia_isu_uuids.empty?
-          warn join_conditions          
-          # isu_conditions = db.xquery("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) ORDER BY `timestamp` DESC").map do |row|
-          isu_conditions = db.xquery("SELECT * FROM `isu_condition` INNER JOIN (SELECT `jia_isu_uuid`,  MAX(`timestamp`) as timestamp FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) GROUP BY `jia_isu_uuid`) AS max using (`jia_isu_uuid`, `timestamp`)").map do |row|
-            [row.fetch(:jia_isu_uuid), row]
-          end.to_h
-        else
-          isu_conditions = {}
+          isu_list.map do |isu|
+            last_condition = isu_conditions.fetch(isu.fetch(:jia_isu_uuid)) { nil }
+            #last_condition = db.xquery('SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1', isu.fetch(:jia_isu_uuid)).first
+
+            formatted_condition = last_condition ? {
+              jia_isu_uuid: last_condition.fetch(:jia_isu_uuid),
+              isu_name: isu.fetch(:name),
+              timestamp: last_condition.fetch(:timestamp).to_i,
+              is_sitting: last_condition.fetch(:is_sitting),
+              condition: last_condition.fetch(:condition),
+              condition_level: calculate_condition_level(last_condition.fetch(:condition)),
+              message: last_condition.fetch(:message),
+            } : nil
+
+            {
+              id: isu.fetch(:id),
+              jia_isu_uuid: isu.fetch(:jia_isu_uuid),
+              name: isu.fetch(:name),
+              character: isu.fetch(:character),
+              latest_isu_condition: formatted_condition,
+            }
+          end
         end
-
-        isu_list.map do |isu|
-          last_condition = isu_conditions.fetch(isu.fetch(:jia_isu_uuid)) { nil }
-          #last_condition = db.xquery('SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1', isu.fetch(:jia_isu_uuid)).first
-
-          formatted_condition = last_condition ? {
-            jia_isu_uuid: last_condition.fetch(:jia_isu_uuid),
-            isu_name: isu.fetch(:name),
-            timestamp: last_condition.fetch(:timestamp).to_i,
-            is_sitting: last_condition.fetch(:is_sitting),
-            condition: last_condition.fetch(:condition),
-            condition_level: calculate_condition_level(last_condition.fetch(:condition)),
-            message: last_condition.fetch(:message),
-          } : nil
-
-          {
-            id: isu.fetch(:id),
-            jia_isu_uuid: isu.fetch(:jia_isu_uuid),
-            name: isu.fetch(:name),
-            character: isu.fetch(:character),
-            latest_isu_condition: formatted_condition,
-          }
-        end
+      rescue => e
+        warn e
+        warn jia_user_id
+        warn isu_conditions
+        raise e
       end
 
       content_type :json
