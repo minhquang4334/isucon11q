@@ -52,7 +52,8 @@ module Isucondition
     class MySQLConnectionEnv
       def connect_db
         Mysql2::Client.new(
-          host: '192.168.0.13',
+          # host: '192.168.0.13',
+          host: '127.0.0.1',
           port: 3306,
           username: 'isucon',
           database: 'isucondition',
@@ -173,11 +174,6 @@ module Isucondition
       halt_error 400, 'bad request body' unless jia_service_url
 
       system('../sql/init.sh', out: :err, exception: true)
-      db.xquery(
-        'INSERT INTO `isu_association_config` (`name`, `url`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `url` = VALUES(`url`)',
-        'jia_service_url',
-        jia_service_url,
-      )
 
       content_type :json
       { language: 'ruby' }.to_json
@@ -221,33 +217,53 @@ module Isucondition
     end
 
     # ISUの一覧を取得
+    # TODO: N+1 を解消
     get '/api/isu' do
       jia_user_id = user_id_from_session
       halt_error 401, 'you are not signed in' unless jia_user_id
+      begin
+        response_list = db_transaction do
+          isu_list = db.xquery('SELECT `jia_isu_uuid`, `name`, `id`, `character` FROM `isu` WHERE `jia_user_id` = ? ORDER BY `id` DESC', jia_user_id)
+          jia_isu_uuids = isu_list.map { |isu| "#{isu.fetch(:jia_isu_uuid)}" }
+          join_conditions = jia_isu_uuids.map { |r| "'#{r}'" }.join(',')
+          unless jia_isu_uuids.empty?
+            warn join_conditions          
+            # isu_conditions = db.xquery("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) ORDER BY `timestamp` DESC").map do |row|
+            isu_conditions = db.xquery("SELECT * FROM `isu_condition` INNER JOIN (SELECT `jia_isu_uuid`,  MAX(`timestamp`) as timestamp FROM `isu_condition` WHERE `jia_isu_uuid` IN (#{join_conditions}) GROUP BY `jia_isu_uuid`) AS max using (`jia_isu_uuid`, `timestamp`)").map do |row|
+              [row.fetch(:jia_isu_uuid), row]
+            end.to_h
+          else
+            isu_conditions = {}
+          end
 
-      response_list = db_transaction do
-        isu_list = db.xquery('SELECT * FROM `isu` WHERE `jia_user_id` = ? ORDER BY `id` DESC', jia_user_id)
-        isu_list.map do |isu|
-          last_condition = db.xquery('SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1', isu.fetch(:jia_isu_uuid)).first
+          isu_list.map do |isu|
+            last_condition = isu_conditions.fetch(isu.fetch(:jia_isu_uuid)) { nil }
+            #last_condition = db.xquery('SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1', isu.fetch(:jia_isu_uuid)).first
 
-          formatted_condition = last_condition ? {
-            jia_isu_uuid: last_condition.fetch(:jia_isu_uuid),
-            isu_name: isu.fetch(:name),
-            timestamp: last_condition.fetch(:timestamp).to_i,
-            is_sitting: last_condition.fetch(:is_sitting),
-            condition: last_condition.fetch(:condition),
-            condition_level: calculate_condition_level(last_condition.fetch(:condition)),
-            message: last_condition.fetch(:message),
-          } : nil
+            formatted_condition = last_condition ? {
+              jia_isu_uuid: last_condition.fetch(:jia_isu_uuid),
+              isu_name: isu.fetch(:name),
+              timestamp: last_condition.fetch(:timestamp).to_i,
+              is_sitting: last_condition.fetch(:is_sitting),
+              condition: last_condition.fetch(:condition),
+              condition_level: calculate_condition_level(last_condition.fetch(:condition)),
+              message: last_condition.fetch(:message),
+            } : nil
 
-          {
-            id: isu.fetch(:id),
-            jia_isu_uuid: isu.fetch(:jia_isu_uuid),
-            name: isu.fetch(:name),
-            character: isu.fetch(:character),
-            latest_isu_condition: formatted_condition,
-          }
+            {
+              id: isu.fetch(:id),
+              jia_isu_uuid: isu.fetch(:jia_isu_uuid),
+              name: isu.fetch(:name),
+              character: isu.fetch(:character),
+              latest_isu_condition: formatted_condition,
+            }
+          end
         end
+      rescue => e
+        warn e
+        warn jia_user_id
+        warn isu_conditions
+        raise e
       end
 
       content_type :json
@@ -266,13 +282,15 @@ module Isucondition
       halt_error 400, 'bad format: icon' if fh && (!fh.kind_of?(Hash) || !fh[:tempfile].is_a?(Tempfile))
 
       use_default_image = fh.nil?
-      image = use_default_image ? File.binread(DEFAULT_ICON_FILE_PATH) : fh.fetch(:tempfile).binmode.read
-
+      image_name = "isu_image/#{jia_isu_uuid}"
+      File.open(image_name, 'wb') do |f|
+        f.write fh.fetch(:tempfile).binmode.read if !use_default_image
+      end
       isu = db_transaction do
         begin
           db.xquery(
             "INSERT INTO `isu` (`jia_isu_uuid`, `name`, `image`, `jia_user_id`) VALUES (?, ?, ?, ?)".b,
-            jia_isu_uuid.b, isu_name.b, image, jia_user_id.b,
+            jia_isu_uuid.b, isu_name.b, nil, jia_user_id.b,
           )
         rescue Mysql2::Error => e
           if e.error_number == MYSQL_ERR_NUM_DUPLICATE_ENTRY
@@ -337,10 +355,7 @@ module Isucondition
       halt_error 401, 'you are not signed in' unless jia_user_id
 
       jia_isu_uuid = params[:jia_isu_uuid]
-      isu = db.xquery('SELECT `image` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?', jia_user_id, jia_isu_uuid).first
-      halt_error 404, 'not found: isu' unless isu
-
-      isu.fetch(:image)
+      image = File.exist?("isu_image/#{jia_isu_uuid}") : File.read("isu_image/#{jia_isu_uuid}") ? File.binread(DEFAULT_ICON_FILE_PATH)
     end
 
     # ISUのコンディショングラフ描画のための情報を取得
@@ -578,6 +593,7 @@ module Isucondition
     end
 
     # ISUの性格毎の最新のコンディション情報
+    # TODO: N+1
     get '/api/trend' do
       character_list = db.query('SELECT `character` FROM `isu` GROUP BY `character`')
 
